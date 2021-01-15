@@ -1,0 +1,8 @@
+package Subleq
+
+modules = Subleq
+
+depends = prelude, base, contrib
+executable = subleq
+sourcedir = "src"
+main = Subleq
