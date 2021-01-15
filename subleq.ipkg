@@ -1,8 +1,8 @@
 package Subleq
 
-modules = Subleq
+modules = Subleq, SignedNat, Memory
 
 depends = prelude, base, contrib
 executable = subleq
 sourcedir = "src"
-main = Subleq
+main = Main

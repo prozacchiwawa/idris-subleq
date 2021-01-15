@@ -165,7 +165,13 @@ actionToTake :
             (readRam (MAddr pc) (getMemOf s)))
           )
         )
-  ) => SubleqMachineAction (getNewPC s) (getStoreAddress s) (signToBool (signSN (getStoreValue s))) (magSN (getStoreValue s))
+  ) =>
+  (SubleqMachineAction
+    (getNewPC s)
+    (getStoreAddress s)
+    (signToBool (signSN (getStoreValue s)))
+   (magSN (getStoreValue s))
+  )
 actionToTake s = SMA (getNewPC s) (getStoreAddress s) (signToBool (signSN (getStoreValue s))) (magSN (getStoreValue s))
 
 public export
@@ -180,3 +186,63 @@ public export
 machineValueAfterApplyingAction : ModTypeInterface mem => {newpc : Nat} -> (sm : SubleqMachine pc mem) -> (s : SubleqMachineAction newpc w sign mag) -> SubleqMachine newpc (memTypeAfterApplyingAction (getMemOf sm) s)
 machineValueAfterApplyingAction sm s =
   SLQ newpc (memValueAfterApplyingAction (getMemOf sm) s)
+
+public export
+step :
+  {pc : Nat} ->
+  (s : SubleqMachine pc mem) ->
+  ( TypeOfReadSign (MemoryAddress pc) mem
+  , TypeOfReadMag (MemoryAddress pc) mem
+  , TypeOfReadSign (MemoryAddress (S pc)) mem
+  , TypeOfReadMag (MemoryAddress (S pc)) mem
+  , TypeOfReadSign (MemoryAddress (S (S pc))) mem
+  , TypeOfReadMag (MemoryAddress (S (S pc))) mem
+  ) =>
+  ( SubSN
+    (SignedNat
+      (typeOfReadSign (MAddr (S pc)) (getMemOf s))
+      (typeOfReadMag (MAddr (S pc)) (getMemOf s))
+    )
+    (SignedNat
+      (typeOfReadSign (MAddr pc) (getMemOf s))
+      (typeOfReadMag (MAddr pc) (getMemOf s))
+    )
+  ) =>
+  ( GreaterSN
+      (SignedNat
+        (typeOfReadSign (MAddr (S pc)) (getMemOf s))
+        (typeOfReadMag (MAddr (S pc)) (getMemOf s))
+      )
+      (SignedNat False 0)
+  ) =>
+  ( SignSN
+      (pfst
+        (subSN
+          (readRam (MAddr (S pc)) (getMemOf s))
+          (readRam (MAddr pc) (getMemOf s))
+        )
+      )
+      (psnd
+        (subSN
+          (readRam (MAddr (S pc)) (getMemOf s))
+          (readRam (MAddr pc) (getMemOf s))
+        )
+      )
+  , MagnitudeSN
+      (SignedNat
+        (pfst
+          (subSN
+            (readRam (MAddr (S pc)) (getMemOf s))
+            (readRam (MAddr pc) (getMemOf s))
+          )
+        )
+        (psnd
+          (subSN
+            (readRam (MAddr (S pc)) (getMemOf s))
+            (readRam (MAddr pc) (getMemOf s)))
+          )
+        )
+  ) =>
+  ( ModTypeInterface mem ) =>
+  SubleqMachine (getNewPC s) (memTypeAfterApplyingAction (getMemOf s) (actionToTake s))
+step s = machineValueAfterApplyingAction s (actionToTake s)
