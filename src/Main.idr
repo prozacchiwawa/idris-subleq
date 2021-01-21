@@ -215,7 +215,7 @@ s ret a b iter one tmp return = SLQ 0 (mem ret a b iter one tmp return)
 main : IO ()
 main = do
   let
-    s_end = step (step (s ret a b iter one tmp return))
+    s_end = step (s ret a b iter one tmp return)
     pc = getPCOf s_end
 
   putStrLn ("Next location " ++ show pc)
