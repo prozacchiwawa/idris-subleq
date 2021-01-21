@@ -231,25 +231,18 @@ mwordSatisfiesTypeOfBrokenR b@(Broken s v mt prf Nothing) =
   Refl
 
 public export
-convertTail : (b : BrokenMemory) -> typeOfBroken b -> Memory (getSignFromBroken b) (getMagFromBroken b) (getNextTypeFromBroken b)
-convertTail b@(Broken s v mt prf x@(Just rr)) r =
+convertTail : (b : BrokenMemory) -> typeOfBroken b = Memory (getSignFromBroken b) (getMagFromBroken b) (getNextTypeFromBroken b)
+convertTail b@(Broken s v mt prf x@(Just rr)) =
   rewrite sym (mwordSatisfiesTypeOfBrokenR b) in
-  let
-    ctail = convertTail rr (unbrokenNext rr)
-
-    res = MWord s v ctail
-  in
-  rewrite prf (typeOfBroken rr) in
-  rewrite mwordSatisfiesTypeOfBrokenR rr in
-  res
-
-convertTail b@(Broken s v mt prf Nothing) r =
-  rewrite sym (mwordSatisfiesTypeOfBrokenR b) in
+  Refl
+convertTail b@(Broken s v mt prf Nothing) =
   rewrite prf Unit in
-  let
-    res = MEnd s v
-  in
-  res
+  Refl
+
+makeMWord : (b : BrokenMemory) -> Memory (getSignFromBroken b) (getMagFromBroken b) (getNextTypeFromBroken b)
+makeMWord b =
+  rewrite sym (convertTail b) in
+  unbrokenNext b
 
 unbrokenNext b@(Broken s v mt prf Nothing) =
   rewrite prf Unit in
@@ -260,10 +253,7 @@ unbrokenNext b@(Broken s v mt prf (Just r)) =
   in
   rewrite prf (typeOfBroken r) in
   rewrite mwordSatisfiesTypeOfBrokenR r in
-  let
-    res = MWord s v (convertTail r next)
-  in
-  res
+  MWord s v (makeMWord r)
 
 modRamValue Nothing = ()
 modRamValue (Just b) = unbrokenNext b
@@ -271,3 +261,7 @@ modRamValue (Just b) = unbrokenNext b
 public export
 modifyRam : ModTypeInterface mem => {n : Nat} -> MemoryAddress n -> (m : mem) -> (a : SignedNat q x) -> typeOfModRam (modTypeInterface (Just n) m a)
 modifyRam ma m a = modRamValue (modTypeInterface (Just n) m a)
+
+public export
+extractRamType : ModTypeInterface mem => (m : mem) -> Type
+extractRamType m = typeOfModRam (modTypeInterface Nothing m (Pos 0))
