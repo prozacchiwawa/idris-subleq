@@ -170,3 +170,15 @@ implementation SubSN (SignedNat False n) (SignedNat False m) => SubSN (SignedNat
 public export
 implementation SubSN (SignedNat True n) (SignedNat True m) => SubSN (SignedNat True (S n)) (SignedNat True (S m)) where
   subSN (Neg (S n)) (Neg (S m)) = subSN (Neg n) (Neg m)
+
+public export
+pfst : (a,b) -> a
+pfst (a,b) = a
+
+public export
+psnd : (a,b) -> b
+psnd (a,b) = b
+
+public export
+signedNatFromSub : (sb : (Bool,Nat)) -> SignedNat (pfst sb) (psnd sb)
+signedNatFromSub sb = createSignedNat (pfst sb) (psnd sb)
