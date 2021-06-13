@@ -79,43 +79,79 @@ signToBool _ = b
 
 public export
 interface GreaterSN sna snb where
-  gtrSN : sna -> snb -> Bool
+  gtrSN_ : sna -> snb -> Bool
 
 public export
 implementation GreaterSN (SignedNat False Z) (SignedNat True Z) where
-  gtrSN _ _ = False
+  gtrSN_ _ _ = False
 
 public export
-implementation GreaterSN (SignedNat False (S _)) (SignedNat True _) where
-  gtrSN _ _ = True
+implementation GreaterSN (SignedNat False Z) (SignedNat True (S _)) where
+  gtrSN_ _ _ = False
+
+public export
+implementation GreaterSN (SignedNat False (S _)) (SignedNat True Z) where
+  gtrSN_ _ _ = True
+
+public export
+implementation GreaterSN (SignedNat False (S _)) (SignedNat True (S _)) where
+  gtrSN_ _ _ = True
 
 public export
 implementation GreaterSN (SignedNat True _) (SignedNat False _) where
-  gtrSN _ _ = False
+  gtrSN_ _ _ = False
 
 public export
-implementation GreaterSN (SignedNat False Z) (SignedNat False _) where
-  gtrSN _ _ = False
+implementation GreaterSN (SignedNat False Z) (SignedNat False Z) where
+  gtrSN_ _ _ = False
+
+public export
+implementation GreaterSN (SignedNat False Z) (SignedNat False (S b)) where
+  gtrSN_ _ _ = False
 
 public export
 implementation GreaterSN (SignedNat False (S a)) (SignedNat False Z) where
-  gtrSN _ _ = True
+  gtrSN_ _ _ = True
 
 public export
 implementation (GreaterSN (SignedNat False a) (SignedNat False b)) => GreaterSN (SignedNat False (S a)) (SignedNat False (S b)) where
-  gtrSN (Pos (S a)) (Pos (S b)) = gtrSN (Pos a) (Pos b)
+  gtrSN_ (Pos (S a)) (Pos (S b)) = gtrSN_ (Pos a) (Pos b)
 
 public export
 implementation GreaterSN (SignedNat True _) (SignedNat True Z) where
-  gtrSN _ _ = False
+  gtrSN_ _ _ = False
 
 public export
 implementation GreaterSN (SignedNat True Z) (SignedNat True (S a)) where
-  gtrSN _ _ = True
+  gtrSN_ _ _ = True
 
 public export
 implementation (GreaterSN (SignedNat True a) (SignedNat True b)) => GreaterSN (SignedNat True (S a)) (SignedNat True (S b)) where
-  gtrSN (Neg (S a)) (Neg (S b)) = gtrSN (Neg a) (Neg b)
+  gtrSN_ (Neg (S a)) (Neg (S b)) = gtrSN_ (Neg a) (Neg b)
+
+public export
+gtrSN : {sn1b : Bool} -> {sn1n : Nat} -> {sn2b : Bool} -> {sn2n : Nat} -> SignedNat sn1b sn1n -> SignedNat sn2b sn2n -> Bool
+gtrSN s1 s2 with (sn1b, sn2b)
+  gtrSN s1 s2 | (False, False) with (sn1n, sn2n)
+    gtrSN s1 s2 | (False, False) | (Z, Z) = gtrSN_ (Pos Z) (Pos Z)
+    gtrSN s1 s2 | (False, False) | (Z, (S n)) = gtrSN_ (Pos Z) (Pos (S n))
+    gtrSN s1 s2 | (False, False) | ((S m), Z) = gtrSN_ (Pos (S m)) (Pos Z)
+    gtrSN s1 s2 | (False, False) | ((S m), (S n)) = gtrSN (Pos (S m)) (Pos (S n))
+  gtrSN s1 s2 | (False, True) with (sn1n, sn2n)
+    gtrSN s1 s2 | (False, True) | (Z, Z) = gtrSN_ (Pos Z) (Neg Z)
+    gtrSN s1 s2 | (False, True) | (Z, (S n)) = gtrSN_ (Pos Z) (Neg (S n))
+    gtrSN s1 s2 | (False, True) | ((S m), Z) = gtrSN_ (Pos (S m)) (Neg Z)
+    gtrSN s1 s2 | (False, True) | ((S m), (S n)) = gtrSN_ (Pos (S m)) (Neg (S n))
+  gtrSN s1 s2 | (True, False) with (sn1n, sn2n)
+    gtrSN s1 s2 | (True, False) | (Z, Z) = gtrSN_ (Neg Z) (Pos Z)
+    gtrSN s1 s2 | (True, False) | (Z, (S n)) = gtrSN_ (Neg Z) (Pos (S n))
+    gtrSN s1 s2 | (True, False) | ((S m), Z) = gtrSN_ (Neg (S m)) (Pos Z)
+    gtrSN s1 s2 | (True, False) | ((S m), (S n)) = gtrSN_ (Neg (S m)) (Pos (S n))
+  gtrSN s1 s2 | (True, True) with (sn1n, sn2n)
+    gtrSN s1 s2 | (True, True) | (Z, Z) = gtrSN_ (Neg Z) (Neg Z)
+    gtrSN s1 s2 | (True, True) | (Z, (S n)) = gtrSN_ (Neg Z) (Neg (S n))
+    gtrSN s1 s2 | (True, True) | ((S m), Z) = gtrSN_ (Neg (S m)) (Neg Z)
+    gtrSN s1 s2 | (True, True) | ((S m), (S n)) = gtrSN (Neg m) (Neg n)
 
 proveNegZNotGtrPosZ : gtrSN (Neg 0) (Pos 0) = False
 proveNegZNotGtrPosZ = Refl
@@ -123,11 +159,9 @@ proveNegZNotGtrPosZ = Refl
 proveNeg15GreaterThanNeg30 : gtrSN (Neg 15) (Neg 30) = True
 proveNeg15GreaterThanNeg30 = Refl
 
-interface LessEqSN sna snb where
-  leqSN : sna -> snb -> Bool
-
-implementation GreaterSN sna snb => LessEqSN sna snb where
-  leqSN a b = not (gtrSN a b)
+public export
+leqSN : {snab : Bool} -> {snan : Nat} -> {snbb : Bool} -> {snbn : Nat} -> (SignedNat snab snan) -> (SignedNat snbb snbn) -> Bool
+leqSN a b = not (gtrSN a b)
 
 public export
 createSignedNat : (b:Bool) -> (m:Nat) -> SignedNat b m
