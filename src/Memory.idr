@@ -12,52 +12,26 @@ data MemoryAddress : Nat -> Type where
   MAddr : (n:Nat) -> MemoryAddress n
 
 public export
-interface TypeOfReadSign maddr mem where
-  typeOfReadSign : maddr -> mem -> Bool
+typeOfReadSign : MemoryAddress n -> Memory s v rest -> Bool
+typeOfReadSign (MAddr Z) (MEnd s _) = s
+typeOfReadSign (MAddr (S i)) (MEnd _ _) = False
+typeOfReadSign (MAddr Z) (MWord s _ _) = s
+typeOfReadSign (MAddr (S i)) (MWord _ _ r) = typeOfReadSign (MAddr i) r
 
 public export
-implementation TypeOfReadSign maddr Unit where
-  typeOfReadSign _ _ = False
+typeOfReadMag : MemoryAddress n -> Memory s v rest -> Nat
+typeOfReadMag (MAddr Z) (MEnd _ v) = v
+typeOfReadMag (MAddr (S i)) (MEnd _ v) = 0
+typeOfReadMag (MAddr Z) (MWord _ v _) = v
+typeOfReadMag (MAddr (S i)) (MWord _ _ r) = typeOfReadMag (MAddr i) r
 
 public export
-implementation TypeOfReadSign (MemoryAddress Z) (Memory s v rest) where
-  typeOfReadSign _ (MEnd False _) = False
-  typeOfReadSign _ (MEnd True _) = True
-  typeOfReadSign _ (MWord False _ _) = False
-  typeOfReadSign _ (MWord True _ _) = True
-
-public export
-implementation TypeOfReadSign (MemoryAddress (S n)) (Memory s v Unit) where
-  typeOfReadSign _ _ = False
-
-public export
-implementation (TypeOfReadSign (MemoryAddress n) rest) => TypeOfReadSign (MemoryAddress (S n)) (Memory s v rest) where
-  typeOfReadSign (MAddr (S n)) (MEnd _ _) = False
-  typeOfReadSign (MAddr (S n)) (MWord _ _ rest) = typeOfReadSign (MAddr n) rest
-
-public export
-interface TypeOfReadMag maddr mem where
-  typeOfReadMag : maddr -> mem -> Nat
-
-public export
-implementation TypeOfReadMag maddr Unit where
-  typeOfReadMag _ _ = 0
-
-public export
-implementation TypeOfReadMag (MemoryAddress Z) (Memory s v rest) where
-  typeOfReadMag _ (MEnd False mag) = mag
-  typeOfReadMag _ (MEnd True mag) = mag
-  typeOfReadMag _ (MWord False mag _) = mag
-  typeOfReadMag _ (MWord True mag _) = mag
-
-public export
-implementation (TypeOfReadMag (MemoryAddress n) rest) => TypeOfReadMag (MemoryAddress (S n)) (Memory s v rest) where
-  typeOfReadMag (MAddr (S n)) (MEnd _ _) = 0
-  typeOfReadMag (MAddr (S n)) (MWord _ _ rest) = typeOfReadMag (MAddr n) rest
-
-public export
-readRam : (TypeOfReadSign maddr mem, TypeOfReadMag maddr mem) => (a : maddr) -> (m : mem) -> (SignedNat (typeOfReadSign a m) (typeOfReadMag a m))
-readRam maddr mem = createSignedNat (typeOfReadSign maddr mem) (typeOfReadMag maddr mem)
+readRam :
+  (a : MemoryAddress n) ->
+  (m : Memory s v r) ->
+  (SignedNat (typeOfReadSign a m) (typeOfReadMag a m))
+readRam maddr mem =
+  createSignedNat (typeOfReadSign maddr mem) (typeOfReadMag maddr mem)
 
 public export
 proofWord1IsPos4 : readRam (MAddr 1) (MWord False 3 (MWord False 4 (MEnd False 5))) = Pos 4
@@ -118,9 +92,13 @@ typeOfBroken (Broken s v makeNext prf follow) =
     Nothing => makeNext Unit
 
 public export
-typeOfModRam : Maybe BrokenMemory -> Type
-typeOfModRam Nothing = Unit
-typeOfModRam (Just b) = typeOfBroken b
+typeOfModRam_ : Maybe BrokenMemory -> Type
+typeOfModRam_ Nothing = Unit
+typeOfModRam_ (Just b) = typeOfBroken b
+
+public export
+typeOfModRam : BrokenMemory -> Type
+typeOfModRam b = typeOfBroken b
 
 public export
 intoMemoryBNIsMemoryBN : (b : Bool) -> (n : Nat) -> intoMemory b n = Memory b n
@@ -139,63 +117,80 @@ interface RestOf mem where
 
 public export
 interface ModTypeInterface mem where
-  modTypeInterface : Maybe Nat -> mem -> SignedNat x v -> Maybe BrokenMemory
+  modTypeInterface_ : Maybe Nat -> mem -> SignedNat x v -> Maybe BrokenMemory
 
 public export
 implementation ModTypeInterface (Memory s t rest) where
-  modTypeInterface Nothing (MEnd s v) _ = Just (broken s v Nothing)
-  modTypeInterface Nothing (MWord s v r) _ =
+  modTypeInterface_ Nothing (MEnd s v) _ = Just (broken s v Nothing)
+  modTypeInterface_ Nothing (MWord s v r) _ =
     let
       t : Maybe BrokenMemory
-      t = modTypeInterface Nothing r (Pos 0)
+      t = modTypeInterface_ Nothing r (Pos 0)
     in
     Just (broken s v t)
-  modTypeInterface (Just Z) (MEnd s v) (Pos e) =
+  modTypeInterface_ (Just Z) (MEnd s v) (Pos e) =
     Just (broken s v Nothing)
-  modTypeInterface (Just Z) (MEnd s v) (Neg e) =
+  modTypeInterface_ (Just Z) (MEnd s v) (Neg e) =
     Just (broken s v Nothing)
-  modTypeInterface (Just Z) (MWord s v r) (Pos e) =
+  modTypeInterface_ (Just Z) (MWord s v r) (Pos e) =
     let
       t : Maybe BrokenMemory
-      t = modTypeInterface Nothing r (Pos e)
+      t = modTypeInterface_ Nothing r (Pos e)
     in
     Just (broken False e t)
-  modTypeInterface (Just Z) (MWord s v r) (Neg e) =
+  modTypeInterface_ (Just Z) (MWord s v r) (Neg e) =
     let
       t : Maybe BrokenMemory
-      t = modTypeInterface Nothing r (Pos e)
+      t = modTypeInterface_ Nothing r (Pos e)
     in
     Just (broken True e t)
-  modTypeInterface (Just (S n)) (MEnd s v) a =
+  modTypeInterface_ (Just (S n)) (MEnd s v) a =
     Just (broken s v Nothing)
-  modTypeInterface (Just (S n)) (MWord s v r) (Pos e) =
+  modTypeInterface_ (Just (S n)) (MWord s v r) (Pos e) =
     let
       t : Maybe BrokenMemory
-      t = modTypeInterface (Just n) r (Pos e)
+      t = modTypeInterface_ (Just n) r (Pos e)
     in
     Just (broken s v t)
-  modTypeInterface (Just (S n)) (MWord s v r) (Neg e) =
+  modTypeInterface_ (Just (S n)) (MWord s v r) (Neg e) =
     let
       t : Maybe BrokenMemory
-      t = modTypeInterface (Just n) r (Neg e)
+      t = modTypeInterface_ (Just n) r (Neg e)
     in
     Just (broken s v t)
 
 public export
 implementation ModTypeInterface Unit where
-  modTypeInterface _ _ _ = Nothing
+  modTypeInterface_ _ _ _ = Nothing
+
+public export
+modTypeInterface : Maybe Nat -> Memory s v rest -> SignedNat p q -> BrokenMemory
+modTypeInterface Nothing (MEnd s v) _ = broken s v Nothing
+modTypeInterface Nothing (MWord s v r) x = broken s v (Just (modTypeInterface Nothing r x))
+modTypeInterface (Just Z) (MEnd s v) (Pos m) =
+  broken False m Nothing
+modTypeInterface (Just Z) (MEnd s v) (Neg m) =
+  broken True m Nothing
+modTypeInterface (Just Z) (MWord s v r) (Pos m) =
+  broken False m (Just (modTypeInterface Nothing r (Pos m)))
+modTypeInterface (Just Z) (MWord s v r) (Neg m) =
+  broken True m (Just (modTypeInterface Nothing r (Neg m)))
+modTypeInterface (Just (S i)) (MEnd s v) _ =
+  broken s v Nothing
+modTypeInterface (Just (S i)) (MWord s v r) x =
+  broken s v (Just (modTypeInterface (Just i) r x))
 
 public export
 implementation (ExtractSign rest, ExtractMag rest, RestOf rest) => RestOf (Memory s v rest) where
   restOf (MEnd _ _) = Nothing
-  restOf (MWord s v r) = modTypeInterface Nothing r (Pos 0)
+  restOf (MWord s v r) = Just (modTypeInterface Nothing r (Pos 0))
 
 public export
 implementation RestOf any where
   restOf _ = Nothing
 
 public export
-typeOfModRamNothingIsUnit : typeOfModRam Nothing = Unit
+typeOfModRamNothingIsUnit : typeOfModRam_ Nothing = Unit
 typeOfModRamNothingIsUnit = Refl
 
 public export
@@ -216,7 +211,7 @@ getNextTypeFromBroken (Broken _ _ f _ Nothing) = Unit
 getNextTypeFromBroken (Broken _ _ f _ (Just r)) = typeOfBroken r
 
 public export
-modRamValue : (b : Maybe BrokenMemory) -> (typeOfModRam b)
+modRamValue_ : (b : Maybe BrokenMemory) -> (typeOfModRam_ b)
 
 public export
 unbrokenNext : (b : BrokenMemory) -> typeOfBroken b
@@ -255,13 +250,17 @@ unbrokenNext b@(Broken s v mt prf (Just r)) =
   rewrite mwordSatisfiesTypeOfBrokenR r in
   MWord s v (makeMWord r)
 
-modRamValue Nothing = ()
-modRamValue (Just b) = unbrokenNext b
+modRamValue_ Nothing = ()
+modRamValue_ (Just b) = unbrokenNext b
+
+modRamValue : (b : BrokenMemory) -> typeOfBroken b
+modRamValue b = unbrokenNext b
 
 public export
-modifyRam : ModTypeInterface mem => {n : Nat} -> MemoryAddress n -> (m : mem) -> (a : SignedNat q x) -> typeOfModRam (modTypeInterface (Just n) m a)
+modifyRam :
+  {n : Nat} ->
+  MemoryAddress n ->
+  (m : Memory s v rest) ->
+  (a : SignedNat q x) ->
+  typeOfModRam (modTypeInterface (Just n) m a)
 modifyRam ma m a = modRamValue (modTypeInterface (Just n) m a)
-
-public export
-extractRamType : ModTypeInterface mem => (m : mem) -> Type
-extractRamType m = typeOfModRam (modTypeInterface Nothing m (Pos 0))

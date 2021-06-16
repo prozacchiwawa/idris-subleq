@@ -20,19 +20,14 @@ getPCOf (SLQ pc _) = pc
 public export
 getStoreAddress :
   {pc : Nat} ->
-  (s : SubleqMachine pc mem) ->
-  ( TypeOfReadMag (MemoryAddress (S pc)) mem
-  ) => Nat
+  (s : SubleqMachine pc (Memory p q r)) ->
+  Nat
 getStoreAddress s = typeOfReadMag (MAddr (S pc)) (getMemOf s)
 
 public export
 indirect :
   (at : Nat) ->
-  (s : SubleqMachine pc mem) ->
-  ( TypeOfReadMag (MemoryAddress at) mem ) =>
-  ( TypeOfReadSign (MemoryAddress (typeOfReadMag (MAddr at) (getMemOf s))) mem
-  , TypeOfReadMag (MemoryAddress (typeOfReadMag (MAddr at) (getMemOf s))) mem
-  ) =>
+  (s : SubleqMachine pc (Memory p q r)) ->
   (SignedNat
     (typeOfReadSign (MAddr (typeOfReadMag (MAddr at) (getMemOf s))) (getMemOf s))
     (typeOfReadMag (MAddr (typeOfReadMag (MAddr at) (getMemOf s))) (getMemOf s))
@@ -45,89 +40,18 @@ indirect at s =
 public export
 getStoreValue :
   {pc : Nat} ->
-  (s : SubleqMachine pc mem) ->
-  ( TypeOfReadMag (MemoryAddress pc) mem ) =>
-  ( TypeOfReadSign (MemoryAddress (typeOfReadMag (MAddr pc) (getMemOf s))) mem
-  , TypeOfReadMag (MemoryAddress (typeOfReadMag (MAddr pc) (getMemOf s))) mem
-  ) =>
-  ( TypeOfReadMag (MemoryAddress (S pc)) mem ) =>
-  ( TypeOfReadSign (MemoryAddress (typeOfReadMag (MAddr (S pc)) (getMemOf s))) mem
-  , TypeOfReadMag (MemoryAddress (typeOfReadMag (MAddr (S pc)) (getMemOf s))) mem
-  ) =>
-  ( SubSN
-    (SignedNat
-      (typeOfReadSign
-        (MAddr (typeOfReadMag (MAddr (S pc)) (getMemOf s))) (getMemOf s)
-      )
-      (typeOfReadMag
-        (MAddr (typeOfReadMag (MAddr (S pc)) (getMemOf s))) (getMemOf s)
-      )
-    )
-    (SignedNat
-      (typeOfReadSign
-        (MAddr (typeOfReadMag (MAddr pc) (getMemOf s))) (getMemOf s)
-      )
-      (typeOfReadMag
-        (MAddr (typeOfReadMag (MAddr pc) (getMemOf s))) (getMemOf s)
-      )
-    )
-  ) =>
+  (s : SubleqMachine pc (Memory p q r)) ->
   (SignedNat
-    (pfst (subSN (indirect (S pc) s) (indirect pc s)))
-    (psnd (subSN (indirect (S pc) s) (indirect pc s)))
+    (signOfSubtraction (indirect (S pc) s) (indirect pc s))
+    (magOfSubtraction (indirect (S pc) s) (indirect pc s))
   )
-getStoreValue s = signedNatFromSub (subSN (indirect (S pc) s) (indirect pc s))
+getStoreValue s = subSN (indirect (S pc) s) (indirect pc s)
 
 public export
 getNewPC :
   {pc : Nat} ->
-  (s : SubleqMachine pc mem) ->
-  ( TypeOfReadMag (MemoryAddress pc) mem ) =>
-  ( TypeOfReadMag (MemoryAddress (S pc)) mem ) =>
-  ( TypeOfReadMag (MemoryAddress (S (S pc))) mem ) =>
-  ( TypeOfReadSign (MemoryAddress (typeOfReadMag (MAddr pc) (getMemOf s))) mem
-  , TypeOfReadMag (MemoryAddress (typeOfReadMag (MAddr pc) (getMemOf s))) mem
-  ) =>
-  ( TypeOfReadSign (MemoryAddress (typeOfReadMag (MAddr (S pc)) (getMemOf s))) mem
-  , TypeOfReadMag (MemoryAddress (typeOfReadMag (MAddr (S pc)) (getMemOf s))) mem
-  ) =>
-  ( SubSN
-     (SignedNat
-       (typeOfReadSign
-         (MAddr
-           (typeOfReadMag (MAddr (S pc)) (getMemOf s))
-         )
-         (getMemOf s)
-       )
-       (typeOfReadMag
-         (MAddr
-           (typeOfReadMag (MAddr (S pc)) (getMemOf s))
-         )
-         (getMemOf s)
-       )
-     )
-     (SignedNat
-       (typeOfReadSign
-         (MAddr
-           (typeOfReadMag (MAddr pc) (getMemOf s))
-         )
-         (getMemOf s)
-       )
-       (typeOfReadMag
-         (MAddr
-           (typeOfReadMag (MAddr pc) (getMemOf s))
-         )
-         (getMemOf s)
-       )
-     )
-  ) =>
-  ( GreaterSN
-     (SignedNat
-       (pfst (subSN (indirect (S pc) s) (indirect pc s)))
-       (psnd (subSN (indirect (S pc) s) (indirect pc s)))
-     )
-     (SignedNat False 0)
-  ) => Nat
+  (s : SubleqMachine pc (Memory p q r)) ->
+  Nat
 getNewPC s =
   if gtrSN (getStoreValue s) (Pos 0) then
     (S (S (S (getPCOf s))))
@@ -137,149 +61,61 @@ getNewPC s =
 public export
 actionToTake :
   {pc : Nat} ->
-  (s : SubleqMachine pc mem) ->
-  ( TypeOfReadMag (MemoryAddress pc) mem ) =>
-  ( TypeOfReadMag (MemoryAddress (S pc)) mem ) =>
-  ( TypeOfReadMag (MemoryAddress (S (S pc))) mem ) =>
-  ( TypeOfReadSign (MemoryAddress (typeOfReadMag (MAddr pc) (getMemOf s))) mem
-  , TypeOfReadMag (MemoryAddress (typeOfReadMag (MAddr pc) (getMemOf s))) mem
-  ) =>
-  ( TypeOfReadSign (MemoryAddress (typeOfReadMag (MAddr (S pc)) (getMemOf s))) mem
-  , TypeOfReadMag (MemoryAddress (typeOfReadMag (MAddr (S pc)) (getMemOf s))) mem
-  ) =>
-  ( SubSN
-     (SignedNat
-       (typeOfReadSign
-         (MAddr
-           (typeOfReadMag (MAddr (S pc)) (getMemOf s))
-         )
-         (getMemOf s)
-       )
-       (typeOfReadMag
-         (MAddr
-           (typeOfReadMag (MAddr (S pc)) (getMemOf s))
-         )
-         (getMemOf s)
-       )
-     )
-     (SignedNat
-       (typeOfReadSign
-         (MAddr
-           (typeOfReadMag (MAddr pc) (getMemOf s))
-         )
-         (getMemOf s)
-       )
-       (typeOfReadMag
-         (MAddr
-           (typeOfReadMag (MAddr pc) (getMemOf s))
-         )
-         (getMemOf s)
-       )
-     )
-  ) =>
-  ( SignSN
-      (pfst (subSN (indirect (S pc) s) (indirect pc s)))
-      (psnd (subSN (indirect (S pc) s) (indirect pc s)))
-  ) =>
-  ( MagnitudeSN
-      (SignedNat
-        (pfst (subSN (indirect (S pc) s) (indirect pc s)))
-        (psnd (subSN (indirect (S pc) s) (indirect pc s)))
-      )
-  ) =>
-  ( GreaterSN
-     (SignedNat
-       (pfst (subSN (indirect (S pc) s) (indirect pc s)))
-       (psnd (subSN (indirect (S pc) s) (indirect pc s)))
-     )
-     (SignedNat False 0)
-  ) =>
+  (s : SubleqMachine pc (Memory p q r)) ->
   (SubleqMachineAction
     (getNewPC s)
     (getStoreAddress s)
-    (signToBool (signSN (getStoreValue s)))
-    (magSN (getStoreValue s))
+    (signOfSN (getStoreValue s))
+    (magOfSN (getStoreValue s))
   )
 actionToTake s =
   SMA
     (getNewPC s)
     (getStoreAddress s)
-    (signToBool (signSN (getStoreValue s)))
-    (magSN (getStoreValue s))
+    (signOfSN (getStoreValue s))
+    (magOfSN (getStoreValue s))
 
 public export
-memTypeAfterApplyingAction : ModTypeInterface mem => (m : mem) -> SubleqMachineAction pc w s v -> Type
-memTypeAfterApplyingAction m (SMA _ w s v) = typeOfModRam (modTypeInterface (Just w) m (createSignedNat s v))
+memTypeAfterApplyingAction :
+  (m : Memory p q r) ->
+  SubleqMachineAction pc w s v ->
+  Type
+memTypeAfterApplyingAction m (SMA _ w s v) =
+  typeOfModRam (modTypeInterface (Just w) m (createSignedNat s v))
 
 public export
-memValueAfterApplyingAction : ModTypeInterface mem => (m : mem) -> (s : SubleqMachineAction pc w sign mag) -> memTypeAfterApplyingAction m s
-memValueAfterApplyingAction m (SMA _ w sign mag) = modifyRam (MAddr w) m (createSignedNat sign mag)
+memValueAfterApplyingAction :
+  (m : Memory p q r) ->
+  (s : SubleqMachineAction pc w sign mag) ->
+  memTypeAfterApplyingAction m s
+memValueAfterApplyingAction m (SMA _ w sign mag) =
+  modifyRam (MAddr w) m (createSignedNat sign mag)
 
 public export
-machineValueAfterApplyingAction : ModTypeInterface mem => {newpc : Nat} -> (sm : SubleqMachine pc mem) -> (s : SubleqMachineAction newpc w sign mag) -> SubleqMachine newpc (memTypeAfterApplyingAction (getMemOf sm) s)
+machineValueAfterApplyingAction :
+  {newpc : Nat} ->
+  (sm : SubleqMachine pc (Memory p q r)) ->
+  (s : SubleqMachineAction newpc w sign mag) ->
+  SubleqMachine newpc (memTypeAfterApplyingAction (getMemOf sm) s)
 machineValueAfterApplyingAction sm s =
   SLQ newpc (memValueAfterApplyingAction (getMemOf sm) s)
+
+readMag : MemoryAddress n -> Memory p q r -> Nat
+readMag (MAddr Z) (MEnd _ q) = q
+readMag (MAddr (S i)) (MEnd _ _) = 0
+readMag (MAddr Z) (MWord _ q _) = q
+readMag (MAddr (S i)) (MWord _ _ r) with (r)
+  readMag (MAddr (S i)) (MWord _ _ r) | (MEnd e f) =
+    readMag (MAddr i) (MEnd e f)
+  readMag (MAddr (S i)) (MWord _ _ r) | (MWord e f g) =
+    readMag (MAddr i) (MWord e f g)
 
 public export
 step :
   {pc : Nat} ->
-  (s : SubleqMachine pc mem) ->
-  ( TypeOfReadMag (MemoryAddress pc) mem ) =>
-  ( TypeOfReadMag (MemoryAddress (S pc)) mem ) =>
-  ( TypeOfReadMag (MemoryAddress (S (S pc))) mem ) =>
-  ( TypeOfReadSign (MemoryAddress (typeOfReadMag (MAddr pc) (getMemOf s))) mem
-  , TypeOfReadMag (MemoryAddress (typeOfReadMag (MAddr pc) (getMemOf s))) mem
-  ) =>
-  ( TypeOfReadSign (MemoryAddress (typeOfReadMag (MAddr (S pc)) (getMemOf s))) mem
-  , TypeOfReadMag (MemoryAddress (typeOfReadMag (MAddr (S pc)) (getMemOf s))) mem
-  ) =>
-  ( SubSN
-      (SignedNat
-        (typeOfReadSign
-          (MAddr
-            (typeOfReadMag (MAddr (S pc)) (getMemOf s))
-          )
-          (getMemOf s)
-        )
-        (typeOfReadMag
-          (MAddr
-            (typeOfReadMag (MAddr (S pc)) (getMemOf s))
-          )
-          (getMemOf s)
-        )
-      )
-      (SignedNat
-        (typeOfReadSign
-          (MAddr
-            (typeOfReadMag (MAddr pc) (getMemOf s))
-          )
-          (getMemOf s)
-        )
-        (typeOfReadMag
-          (MAddr
-            (typeOfReadMag (MAddr pc) (getMemOf s))
-          )
-          (getMemOf s)
-        )
-      )
-  ) =>
-  ( SignSN
-      (pfst (subSN (indirect (S pc) s) (indirect pc s)))
-      (psnd (subSN (indirect (S pc) s) (indirect pc s)))
-  ) =>
-  ( MagnitudeSN
-      (SignedNat
-        (pfst (subSN (indirect (S pc) s) (indirect pc s)))
-        (psnd (subSN (indirect (S pc) s) (indirect pc s)))
-      )
-  ) =>
-  ( GreaterSN
-     (SignedNat
-       (pfst (subSN (indirect (S pc) s) (indirect pc s)))
-       (psnd (subSN (indirect (S pc) s) (indirect pc s)))
-     )
-     (SignedNat False 0)
-  ) =>
-  ( ModTypeInterface mem ) =>
+  {p : Bool} ->
+  {q : Nat} ->
+  {r : rest} ->
+  (s : SubleqMachine pc (Memory p q r)) ->
   SubleqMachine (getNewPC s) (memTypeAfterApplyingAction (getMemOf s) (actionToTake s))
 step s = machineValueAfterApplyingAction s (actionToTake s)

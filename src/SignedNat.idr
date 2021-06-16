@@ -58,64 +58,31 @@ implementation (MagnitudeSN (SignedNat False n)) => MagnitudeSN (SignedNat False
   magSN (Pos (S n)) = S (magSN (Pos n))
 
 public export
-data SNSign : Bool -> Type where
-  SNS : (b : Bool) -> SNSign b
+signOfSN : {s : Bool} -> SignedNat s v -> Bool
+signOfSN (Pos _) = False
+signOfSN (Neg _) = True
 
 public export
-interface SignSN s v where
-  signSN : SignedNat s v -> SNSign s
+magOfSN : {v : Nat} -> SignedNat s v -> Nat
+magOfSN (Pos v) = v
+magOfSN (Neg v) = v
 
 public export
-implementation SignSN False v where
-  signSN _ = SNS False
-
-public export
-implementation SignSN True v where
-  signSN _ = SNS True
-
-public export
-signToBool : {b : Bool} -> SNSign b -> Bool
-signToBool _ = b
-
-public export
-interface GreaterSN sna snb where
-  gtrSN : sna -> snb -> Bool
-
-public export
-implementation GreaterSN (SignedNat False Z) (SignedNat True Z) where
-  gtrSN _ _ = False
-
-public export
-implementation GreaterSN (SignedNat False (S _)) (SignedNat True _) where
-  gtrSN _ _ = True
-
-public export
-implementation GreaterSN (SignedNat True _) (SignedNat False _) where
-  gtrSN _ _ = False
-
-public export
-implementation GreaterSN (SignedNat False Z) (SignedNat False _) where
-  gtrSN _ _ = False
-
-public export
-implementation GreaterSN (SignedNat False (S a)) (SignedNat False Z) where
-  gtrSN _ _ = True
-
-public export
-implementation (GreaterSN (SignedNat False a) (SignedNat False b)) => GreaterSN (SignedNat False (S a)) (SignedNat False (S b)) where
-  gtrSN (Pos (S a)) (Pos (S b)) = gtrSN (Pos a) (Pos b)
-
-public export
-implementation GreaterSN (SignedNat True _) (SignedNat True Z) where
-  gtrSN _ _ = False
-
-public export
-implementation GreaterSN (SignedNat True Z) (SignedNat True (S a)) where
-  gtrSN _ _ = True
-
-public export
-implementation (GreaterSN (SignedNat True a) (SignedNat True b)) => GreaterSN (SignedNat True (S a)) (SignedNat True (S b)) where
-  gtrSN (Neg (S a)) (Neg (S b)) = gtrSN (Neg a) (Neg b)
+gtrSN : SignedNat s1 v1 -> SignedNat s2 v2 -> Bool
+gtrSN (Pos 0) (Pos 0) = False
+gtrSN (Pos 0) (Neg 0) = False
+gtrSN (Neg 0) (Pos 0) = False
+gtrSN (Neg 0) (Neg 0) = False
+gtrSN (Pos 0) (Pos (S _)) = False
+gtrSN (Pos 0) (Neg (S _)) = True
+gtrSN (Neg 0) (Pos (S _)) = False
+gtrSN (Neg 0) (Neg (S _)) = True
+gtrSN (Pos (S _)) (Pos 0) = True
+gtrSN (Pos (S _)) (Neg _) = True
+gtrSN (Pos (S m)) (Pos (S n)) = gtrSN (Pos m) (Pos n)
+gtrSN (Neg (S _)) (Neg 0) = False
+gtrSN (Neg (S m)) (Neg (S n)) = gtrSN (Neg m) (Neg n)
+gtrSN (Neg (S _)) (Pos _) = False
 
 proveNegZNotGtrPosZ : gtrSN (Neg 0) (Pos 0) = False
 proveNegZNotGtrPosZ = Refl
@@ -123,11 +90,9 @@ proveNegZNotGtrPosZ = Refl
 proveNeg15GreaterThanNeg30 : gtrSN (Neg 15) (Neg 30) = True
 proveNeg15GreaterThanNeg30 = Refl
 
-interface LessEqSN sna snb where
-  leqSN : sna -> snb -> Bool
-
-implementation GreaterSN sna snb => LessEqSN sna snb where
-  leqSN a b = not (gtrSN a b)
+public export
+leqSN : SignedNat s1 v1 -> SignedNat s2 v2 -> Bool
+leqSN a b = not (gtrSN a b)
 
 public export
 createSignedNat : (b:Bool) -> (m:Nat) -> SignedNat b m
@@ -139,39 +104,6 @@ magSNIsMagnitude : (s : Bool) -> (n : Nat) -> (MagnitudeExtract s n) => extToNat
 magSNIsMagnitude s n = Refl
 
 public export
-interface SubSN sna snb where
-  subSN : sna -> snb -> (Bool, Nat)
-
-public export
-implementation SubSN (SignedNat _ _) (SignedNat _ Z) where
-  subSN (Neg x) _ = (True, x)
-  subSN (Pos x) _ = (False, x)
-
-public export
-implementation SubSN (SignedNat True _) (SignedNat False _) where
-  subSN (Neg x) (Pos y) = (True, x + y)
-
-public export
-implementation SubSN (SignedNat False _) (SignedNat True _) where
-  subSN (Pos x) (Neg y) = (False, x + y)
-
-public export
-implementation SubSN (SignedNat False Z) (SignedNat False (S n)) where
-  subSN (Pos Z) (Pos (S n)) = subSN (Neg 1) (Pos n)
-
-public export
-implementation SubSN (SignedNat True Z) (SignedNat False (S n)) where
-  subSN (Neg Z) (Pos (S n)) = subSN (Neg 1) (Pos n)
-
-public export
-implementation SubSN (SignedNat False n) (SignedNat False m) => SubSN (SignedNat False (S n)) (SignedNat False (S m)) where
-  subSN (Pos (S n)) (Pos (S m)) = subSN (Pos n) (Pos m)
-
-public export
-implementation SubSN (SignedNat True n) (SignedNat True m) => SubSN (SignedNat True (S n)) (SignedNat True (S m)) where
-  subSN (Neg (S n)) (Neg (S m)) = subSN (Neg n) (Neg m)
-
-public export
 pfst : (a,b) -> a
 pfst (a,b) = a
 
@@ -180,5 +112,55 @@ psnd : (a,b) -> b
 psnd (a,b) = b
 
 public export
-signedNatFromSub : (sb : (Bool,Nat)) -> SignedNat (pfst sb) (psnd sb)
-signedNatFromSub sb = createSignedNat (pfst sb) (psnd sb)
+signOfSubtraction : (SignedNat s1 v1) -> (SignedNat s2 v2) -> Bool
+signOfSubtraction (Pos Z) (Pos Z) = False
+signOfSubtraction (Pos Z) (Neg Z) = False
+signOfSubtraction (Neg Z) (Pos Z) = False
+signOfSubtraction (Neg Z) (Neg Z) = False
+signOfSubtraction (Pos Z) (Pos _) = True
+signOfSubtraction (Neg Z) (Pos _) = True
+signOfSubtraction (Pos Z) (Neg _) = False
+signOfSubtraction (Neg Z) (Neg _) = False
+signOfSubtraction (Pos (S m)) (Pos (S n)) =
+  signOfSubtraction (Pos m) (Pos n)
+signOfSubtraction (Pos (S _)) (Pos 0) = False
+signOfSubtraction (Neg (S _)) (Pos 0) = False
+signOfSubtraction (Pos (S _)) (Neg 0) = False
+signOfSubtraction (Neg (S _)) (Neg 0) = False
+signOfSubtraction (Pos (S _)) (Neg (S _)) = False
+signOfSubtraction (Neg (S _)) (Pos (S _)) = True
+signOfSubtraction (Neg (S m)) (Neg (S n)) =
+  signOfSubtraction (Neg m) (Neg n)
+
+public export
+magOfSubtraction : (SignedNat s1 v1) -> (SignedNat s2 v2) -> Nat
+magOfSubtraction (Pos Z) (Pos n) = n
+magOfSubtraction (Neg Z) (Pos n) = n
+magOfSubtraction (Pos Z) (Neg n) = n
+magOfSubtraction (Neg Z) (Neg n) = n
+magOfSubtraction (Pos (S m)) (Pos (S n)) =
+  magOfSubtraction (Pos m) (Pos n)
+magOfSubtraction (Pos (S m)) (Pos 0) = m
+magOfSubtraction (Neg (S m)) (Pos 0) = m
+magOfSubtraction (Pos (S m)) (Neg 0) = m
+magOfSubtraction (Neg (S m)) (Neg 0) = m
+magOfSubtraction (Pos (S m)) (Neg (S n)) = m + n
+magOfSubtraction (Neg (S m)) (Pos (S n)) = m + n
+magOfSubtraction (Neg (S m)) (Neg (S n)) =
+  magOfSubtraction (Neg m) (Neg n)
+
+public export
+subSN :
+  {s1 : Bool} ->
+  {v1 : Nat} ->
+  {s2 : Bool} ->
+  {v2 : Nat} ->
+  SignedNat s1 v1 ->
+  SignedNat s2 v2 ->
+  SignedNat
+    (signOfSubtraction (createSignedNat s1 v1) (createSignedNat s2 v2))
+    (magOfSubtraction (createSignedNat s1 v1) (createSignedNat s2 v2))
+subSN _ _ =
+  createSignedNat
+    (signOfSubtraction (createSignedNat s1 v1) (createSignedNat s2 v2))
+    (magOfSubtraction (createSignedNat s1 v1) (createSignedNat s2 v2))
